@@ -1,5 +1,4 @@
 .venv/
-.env
 __pycache__/
 *.pyc
 .idea/
@@ -11,3 +10,4 @@ dist/
 .env.*.local
 coverage/
 *.log
+.env

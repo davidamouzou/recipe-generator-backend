@@ -1,16 +1,18 @@
 import json
 from datetime import datetime
-
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
 from config import config
 from database.recipe_provider import RecipeProvider
 from database.user_provider import UserProvider
+from models.recipe import Recipe
+from models.recipe_prompt import RecipePrompt
+from models.user import User
 from services.image_generator import text_to_image
 from services.recipe_generator import generate_recipe_by_description
 from services.upload_url_image import save_image
+
 
 app = FastAPI()
 
@@ -39,13 +41,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-class Description(BaseModel):
-    text: str
-    language: str = "en"
-    files: list[dict] = []
-
-
 class ImageDescription(BaseModel):
     text: str
 
@@ -60,8 +55,8 @@ def root():
     }
 
 
-@app.post("/gen_witch_text/")
-def recipe_by_description(description: Description):
+@app.post("/generate/")
+def recipe_by_description(description: RecipePrompt):
     string_json = description.model_dump_json()
     try:
         return generate_recipe_by_description(json.loads(string_json))
@@ -95,18 +90,6 @@ def generate_image_text(image_description: ImageDescription, res: Response):
         }
 
 
-# User data manager
-class User(BaseModel):
-    uid: str
-    full_name: str
-    created_at: datetime = datetime.now()
-    photo_url: str
-    status: bool = True
-    email: str
-    info_message: str = ""
-    last_request: datetime = datetime.now()
-
-
 @app.post("/user/")
 def create_user(user: User, res: Response):
     try:
@@ -133,30 +116,13 @@ def get_user(uid: str, res: Response):
         }
 
 
-# Recipe data manager
-class Recipe(BaseModel):
-    created_at: datetime = datetime.now()
-    recipe_name: str
-    created_by: str  # User create recipe
-    ingredients: list[str]  # ingredients to compose recipe
-    instructions: list[str]
-    continent: str
-    language: str
-    duration_to_cook: int
-    servings: int
-    difficulty: str
-    cuisine: str
-    description: str
-    meal_type: str
-    nutrition_facts: dict  # No description
-    image: str
-
-
 @app.post("/recipe/")
 def create_recipe(recipe: Recipe, res: Response):
+    print("Received recipe:")
     try:
-        recipe_data = json.loads(recipe.model_dump_json())
-        response = RecipeProvider.save_recipe(recipe_data)
+        print("Received recipe:")
+        print(recipe)
+        response = RecipeProvider.save_recipe(recipe.model_dump())
         return response
     except Exception as e:
         res.status_code = 500

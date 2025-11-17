@@ -4,71 +4,8 @@ import json
 from google import genai
 from PIL import Image  # Pillow library for image manipulation
 from config import config
-from typing import Tuple
-
-
-# format of the response from the model (valid JSON example with concrete placeholders)
-response_format = '''
-{
-    "recipe_name": "",
-    "diet": "",
-    "continent": "",
-    "language": "",
-    "ingredients": [""],
-    "duration_to_cook": 0,
-    "servings": 0,
-    "instructions": [""],
-    "difficulty": "",
-    "cuisine": "",
-    "description": "",
-    "meal_type": "",
-    "image": "",
-    "nutrition_facts": {
-        "calories": "",
-        "protein": "",
-        "carbohydrates": "",
-        "fat": "",
-        "vitamins": "",
-        "minerals": "",
-        "dietary_fiber": "",
-        "sugar": "",
-        "salt": "",
-        "antioxidants": ""
-    }
-}
-'''
-
-
-def smart_json_encode(text: str) -> dict:
-    # Remove common markdown fences and surrounding noise, then extract the first JSON object/array found.
-    if not isinstance(text, str):
-        raise ValueError("Response text is not a string")
-
-    cleaned = text.replace("```json", "").replace("```", "").strip()
-
-    # Find the start of the JSON (either object or array)
-    start_idx = None
-    for i, ch in enumerate(cleaned):
-        if ch in ("{", "["):
-            start_idx = i
-            break
-
-    if start_idx is None:
-        raise ValueError("No JSON object or array found in response")
-
-    open_char = cleaned[start_idx]
-    close_char = "}" if open_char == "{" else "]"
-
-    # Find the last matching closing character
-    end_idx = cleaned.rfind(close_char)
-    if end_idx == -1 or end_idx <= start_idx:
-        raise ValueError("No closing JSON bracket found in response")
-
-    json_text = cleaned[start_idx:end_idx + 1]
-    obj = json.loads(json_text)
-
-    return obj
-
+from models import response_format
+    
 
 # Generate a recipe based on a description
 def generate_recipe_by_description(data) -> dict:
@@ -94,4 +31,5 @@ def generate_recipe_by_description(data) -> dict:
     response = client.models.generate_content(model="gemini-2.5-flash", contents=[prompt, *list_file])
     client.close()
 
-    return smart_json_encode(response.text)
+    cleaned = response.text.replace("```json", "").replace("```", "").strip()
+    return json.loads(cleaned)
