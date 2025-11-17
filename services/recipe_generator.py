@@ -1,85 +1,97 @@
 import base64
 import io
 import json
-
-import google.generativeai as genai
+from google import genai
 from PIL import Image  # Pillow library for image manipulation
-
 from config import config
+from typing import Tuple
 
-# Configuration of the Gemini model
-genai.configure(api_key=config.get("model_api_key"))
-model = genai.GenerativeModel("gemini-2.0-flash-exp")
-# format of the response from the model
+
+# format of the response from the model (valid JSON example with concrete placeholders)
 response_format = '''
 {
-    "recipe_name": "string",
-    "diet": "string",
-    "continent": "string"("africa", "america", "asia", "australia", "europe", "oceania"),
-    "language": "string",
-    "ingredients": ["string"],
-    "duration_to_cook": "int",
-    "servings": "int",
-    "instructions": ["string"],
-    "difficulty": "string",
-    "cuisine": "string",
-    "description": "string",
-    "meal_type": "string" ("breakfast", "lunch", "dinner", "dessert"),
-    "image": "string" (The description of the image must be in English),
+    "recipe_name": "",
+    "diet": "",
+    "continent": "",
+    "language": "",
+    "ingredients": [""],
+    "duration_to_cook": 0,
+    "servings": 0,
+    "instructions": [""],
+    "difficulty": "",
+    "cuisine": "",
+    "description": "",
+    "meal_type": "",
+    "image": "",
     "nutrition_facts": {
-        "calories": "string",
-        "protein": "string",
-        "carbohydrates": "string",
-        "fat": "string",
-        "vitamins" : "string",
-        "minerals" : "string",
-        "dietary_fiber": "string",
-        "Sugar": "string",
-        "Salt": "string",
-        "antioxidants": "string"
+        "calories": "",
+        "protein": "",
+        "carbohydrates": "",
+        "fat": "",
+        "vitamins": "",
+        "minerals": "",
+        "dietary_fiber": "",
+        "sugar": "",
+        "salt": "",
+        "antioxidants": ""
     }
 }
 '''
 
 
-def convert_to_json(text):
-    text = text.replace("json", "").replace("```", "")
-    return json.loads(text)
+def smart_json_encode(text: str) -> dict:
+    # Remove common markdown fences and surrounding noise, then extract the first JSON object/array found.
+    if not isinstance(text, str):
+        raise ValueError("Response text is not a string")
+
+    cleaned = text.replace("```json", "").replace("```", "").strip()
+
+    # Find the start of the JSON (either object or array)
+    start_idx = None
+    for i, ch in enumerate(cleaned):
+        if ch in ("{", "["):
+            start_idx = i
+            break
+
+    if start_idx is None:
+        raise ValueError("No JSON object or array found in response")
+
+    open_char = cleaned[start_idx]
+    close_char = "}" if open_char == "{" else "]"
+
+    # Find the last matching closing character
+    end_idx = cleaned.rfind(close_char)
+    if end_idx == -1 or end_idx <= start_idx:
+        raise ValueError("No closing JSON bracket found in response")
+
+    json_text = cleaned[start_idx:end_idx + 1]
+    obj = json.loads(json_text)
+
+    return obj
 
 
 # Generate a recipe based on a description
-def generate_recipe_by_description(data):
+def generate_recipe_by_description(data) -> dict:
+    # Configuration of the Gemini model
+    client = genai.Client(api_key=config.get("model_api_key"))
+
+    list_file = []
+    if data['files']:
+        # Convert the base64 string to image
+        for imageBase in data['files']:
+            img_data = base64.b64decode(imageBase['base64'])
+            image = Image.open(io.BytesIO(img_data))
+            list_file.append(image)
+
     prompt = f"""
     Analyze the following user input: "{data['text']}" and return an appropriate response in {data['language']}:
     1. If the input is not related to ingredients or a dish, return the following response in JSON format:
-    {{"message": str, "data": []}}.
+    {{"message": "", "data": []}}.
     2. If the input is relevant and describes specific ingredients or a dish, return a corresponding recipe in the form of a JSON object:
-    {{"message": str, "data": [{response_format}]}}.
+    {{"message": "", "data": [{response_format}]}}.
     Note: The response must be formulated in the language {data['language']} and should be only JSON, not any other message.
     """
+    response = client.models.generate_content(model="gemini-2.5-flash", contents=[prompt, *list_file])
+    client.close()
 
-    response = model.generate_content(prompt)
-    return convert_to_json(response.text)
-
-
-def generate_recipe_by_images(data):
-    prompt = f"""
-    Analyze the following images and return the results in JSON format:
-    1. If the image does not contain recipes or elements usable for cooking, return:
-    {{"message": str, "data": []}}.
-    2. If the image contains one or more recipes, return the recipes in the form of a JSON array (not the same recipe):
-    [{response_format}].
-    3. If the image contains fruits, vegetables, or grains, return an example recipe that can be cooked with these ingredients. The response should be in the form of a JSON array:
-    {{"message": str, "data": [{response_format}, {response_format}]}}.
-    Note: All data must be provided in the following language: {data['language']} and should be only JSON, not any other message.
-    """
-
-    # Convert the base64 string to image
-    list_file = []
-    for imageBase in data['images']:
-        img_data = base64.b64decode(imageBase['base64'])
-        image = Image.open(io.BytesIO(img_data))
-        list_file.append(image)
-
-    response = model.generate_content([prompt] + list_file)
-    return convert_to_json(response.text)
+    return smart_json_encode(response.text)

@@ -9,7 +9,7 @@ from config import config
 from database.recipe_provider import RecipeProvider
 from database.user_provider import UserProvider
 from services.image_generator import text_to_image
-from services.recipe_generator import generate_recipe_by_description, generate_recipe_by_images
+from services.recipe_generator import generate_recipe_by_description
 from services.upload_url_image import save_image
 
 app = FastAPI()
@@ -43,11 +43,8 @@ app.add_middleware(
 class Description(BaseModel):
     text: str
     language: str = "en"
+    files: list[dict] = []
 
-
-class Images(BaseModel):
-    images: list
-    language: str = "en"
 
 class ImageDescription(BaseModel):
     text: str
@@ -55,17 +52,12 @@ class ImageDescription(BaseModel):
 
 @app.get("/")
 def root():
-    return "Welcome to the Recipe Generator monorepo!, 😇 🥙"
-
-@app.get("/server_info/")
-def get_server_info(request: Request):
-    server_info = {
+    return {
+        "status": "success",
+        "message": "Recipe Generator API is running.", 
         "server_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "server_timezone": datetime.now().astimezone().tzname(),
-        "server_name": "Recipe Generator Server",
-        "server_port": request.url.port,
     }
-    return server_info
 
 
 @app.post("/gen_witch_text/")
@@ -75,14 +67,7 @@ def recipe_by_description(description: Description):
         return generate_recipe_by_description(json.loads(string_json))
     except Exception as e:
         return f"Error: {e}"
-   
-    
-@app.post("/gen_witch_image/")
-def recipe_by_images(images: Images):
-    try:
-        return generate_recipe_by_images(json.loads(images.model_dump_json()))
-    except Exception as e:
-        return f"Error: {e}"
+
 
 class ImageUpload(BaseModel):
     url: str
