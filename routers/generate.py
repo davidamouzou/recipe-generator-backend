@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Request, Response
+from fastapi.responses import JSONResponse
 from requests import post
 import base64
 import io
@@ -51,7 +52,7 @@ async def generate_recipe(recipe_prompt: RecipePrompt, res: Response):
         data['created_at'] = datetime.now(timezone.utc).isoformat()
         return data
     except Exception as e:
-        return Response(status_code=500, content=f"Error: {e}")
+        return JSONResponse(status_code=503, content=f"Error: {e}")
     
 
 @router.post("/image")

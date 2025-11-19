@@ -18,16 +18,16 @@ def save(recipe: Recipe):
         res = recipe_table.insert(json_data).execute()
         return res.data
     except Exception as e:
-        return Response(status_code=500, content=f"Error: {e}")
+        return JSONResponse(status_code=503, content=f"Error: {e}")
 
 
 @router.get("/{recipe_id}")
 def get_recipe(recipe_id: int):
     try:
         res = recipe_table.select("*").eq('id', recipe_id).execute()
-        return res
+        return res.data[0] if res.data else None
     except Exception as e:
-        return Response(status_code=500, content=f"Error: {e}")
+        return JSONResponse(status_code=503, content=f"Error: {e}")
 
 
 @router.get("/")
@@ -37,9 +37,9 @@ def get_all(offset: int = 0, limit: int = 10):
 
     try:
         response = recipe_table.select('*').range(offset, limit).order('id', desc=True).execute()
-        return response
+        return response.data
     except Exception as e:
-        return Response(status_code=500, content=f"Error: {e}")
+        return JSONResponse(status_code=503, content=f"Error: {e}")
 
 
 @router.post("/upload_image")
@@ -49,4 +49,4 @@ async def upload_image(req: Request):
         res = save_image(url=data['url'], bucket="recipe-gen-images")
         return res
     except Exception as e:
-        return Response(status_code=500, content=f"Error: {e}")
+        return JSONResponse(status_code=503, content=f"Error: {e}")
