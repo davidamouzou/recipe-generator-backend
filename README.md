@@ -47,3 +47,51 @@ pip install -r requirements.txt
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
+
+## API Endpoints
+
+### Base URL
+```
+http://localhost:8000
+```
+
+### Health Check
+- **GET** `/` - Check if the API is running
+
+### Generate Service (`/generate`)
+- **POST** `/generate/recipe` - Generate a recipe from text or images
+  - Request body: `RecipePrompt` (text, language, files)
+  - Returns: Generated recipe in JSON format
+
+- **POST** `/generate/image` - Generate an image based on recipe description
+  - Request body: `{ "description": "string" }`
+  - Returns: Generated image URL
+
+### Recipes Service (`/recipes`)
+- **POST** `/recipes/add` - Save a recipe to the database
+  - Request body: `Recipe` model
+  - Returns: Saved recipe data
+
+- **GET** `/recipes/` - Get all recipes with pagination
+  - Query params: `offset` (default: 0), `limit` (default: 10)
+  - Returns: List of recipes
+
+- **GET** `/recipes/{recipe_id}` - Get a specific recipe by ID
+  - Path param: `recipe_id` (integer)
+  - Returns: Recipe object or null
+
+### Upload Service (`/upload`)
+- **POST** `/upload/image` - Upload an image to storage
+  - Request body: `{ "url": "image_url_string" }`
+  - Returns: Public URL of uploaded image
+
+## Authentication
+
+All endpoints (except `/`) require an API key in the request header:
+
+```
+Header: api-key: your_custom_api_key
+```
+
+The API key must match the `API_KEY` environment variable.
+
