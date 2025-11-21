@@ -1,7 +1,5 @@
-import json
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 from config import supabase_client
 from models.recipe import Recipe
 from services.upload_url_image import save_image
