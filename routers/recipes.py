@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from config import supabase_client
 from models.recipe import Recipe
-from services.upload_url_image import save_image
 
 
 recipe_table = supabase_client.table("recipes")
@@ -36,15 +35,5 @@ def get_all(offset: int = 0, limit: int = 10):
     try:
         response = recipe_table.select('*').range(offset, limit).order('id', desc=True).execute()
         return response.data
-    except Exception as e:
-        return JSONResponse(status_code=503, content=f"Error: {e}")
-
-
-@router.post("/upload_image")
-async def upload_image(req: Request):
-    data = await req.json()
-    try:
-        res = save_image(url=data['url'], bucket="recipe-gen-images")
-        return res
     except Exception as e:
         return JSONResponse(status_code=503, content=f"Error: {e}")

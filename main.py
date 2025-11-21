@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from config import config
-from routers import generate, recipes
+from routers import generate, recipes, upload
 
 
 app = FastAPI()
@@ -11,6 +11,7 @@ app = FastAPI()
 # Include routers
 app.include_router(generate.router)
 app.include_router(recipes.router)
+app.include_router(upload.router)
 
 @app.middleware("http")
 async def verify_api_key(request: Request, call_next):
